@@ -128,6 +128,44 @@ def init_db() -> None:
         conn.execute(CREATE_BRIEFS_INDEX_SQL)
         conn.commit()
 
+        row_count = conn.execute(
+            "SELECT COUNT(*) FROM competitor_ads;"
+        ).fetchone()[0]
+
+    if row_count == 0:
+        _seed_database()
+
+
+def _seed_database() -> None:
+    """Insert all mock records. Called on startup when the table is empty."""
+    from scraper.mock_data import generate_mock_ads
+
+    records = generate_mock_ads()
+    with get_db() as conn:
+        for rec in records:
+            conn.execute(
+                """
+                INSERT INTO competitor_ads (
+                    id, ad_id, competitor_name, competitor_page_id,
+                    brand, vertical, ad_format, message_theme, emotional_tone,
+                    headline, body_text, cta, platform,
+                    estimated_spend_min, estimated_spend_max,
+                    start_date, end_date, is_active, days_running,
+                    num_cards, country, source
+                ) VALUES (
+                    :id, :ad_id, :competitor_name, :competitor_page_id,
+                    :brand, :vertical, :ad_format, :message_theme, :emotional_tone,
+                    :headline, :body_text, :cta, :platform,
+                    :estimated_spend_min, :estimated_spend_max,
+                    :start_date, :end_date, :is_active, :days_running,
+                    :num_cards, :country, :source
+                )
+                ON CONFLICT(ad_id) DO NOTHING;
+                """,
+                rec,
+            )
+        conn.commit()
+
 
 # ---------------------------------------------------------------------------
 # GET /health
